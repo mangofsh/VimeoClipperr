@@ -121,8 +121,10 @@
         <button class="bg-primary text-white px-4 py-2 rounded hidden" onclick="saveEdits()">Save Changes</button>
       </div>
 
-      <div id="initialButtonContainer" class="mt-4">
-        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="generateInitial()">Generate Initial Profile</button>
+      <div id="initialButtonContainer" class="mt-8">
+        <input type="text" id="VideoID" placeholder="Enter Vimeo ID"
+           class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white mb-4 placeholder-gray-500" />
+        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="downloadVideo()">Generate Initial Profile</button>
       </div>
 
       <div id="enrichmentSection" class="hidden mt-8">
@@ -201,13 +203,40 @@ He is known as a **thoughtful collaborator**, **educator-mentor**, and a **conne
         document.getElementById("statusMessage").innerText = `✅ Loaded profile for ${code}`;
       } else {
         document.getElementById("initialButtonContainer").classList.remove("hidden");
+        document.getElementById("generatedOutput").classList.add("hidden");
         document.getElementById("enrichmentSection").classList.add("hidden");
         document.getElementById("editControls").classList.add("hidden");
         document.getElementById("statusMessage").innerText = `🆕 Creating new profile for ${code}`;
       }
     }
 
+    async function downloadVideo() { //This function does not work yet, idk how to call the downloader
+      const videoId = document.getElementById("VideoID").value.trim();
+      if (!videoId) {
+        alert("Please enter a Vimeo ID.");
+        return;
+      }
+      document.getElementById("statusMessage").innerText = "⏳ Starting video download...";
+      try {
+        const response = await fetch("/api/run_video_downloader", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ VIDEO_ID: videoId })
+        });
+        if (response.ok) {
+          document.getElementById("statusMessage").innerText = "✅ Video download started.";
+        } else {
+          document.getElementById("statusMessage").innerText = "❌ Failed to start video download.";
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById("statusMessage").innerText = "❌ Error occurred while starting video download.";
+      }
+   }
+
+
     async function generateInitial() {
+
       document.getElementById("statusMessage").innerText = "⏳ Generating profile...";
       document.getElementById("loadingOverlay").classList.remove("hidden");
 
