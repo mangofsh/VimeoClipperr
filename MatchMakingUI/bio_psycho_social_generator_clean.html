@@ -141,6 +141,10 @@
   </div>
 
   <script>
+
+    let intakeData = {};
+
+/*
     const intakeData = {
       individualName: "Dr. Ayaan Malik",
       businessName: "NeuroFocus Clinics",
@@ -149,23 +153,23 @@
       workIssues: "Wants to attract more patients online and automate appointment scheduling",
       serviceNeeds: "Marketing, web design, CRM tools"
     };
-
+*/
     const mockDatabase = {
         ya214: `# Bio-Psycho-Social Business Profile
 
 ## Bio  
-**Name:** Dr. Yusef Alimam  
+**Name:** Yusef Alimam  
 **Profession:** Medical AI Strategist, CTO, Educator  
 **Business Name:** Green Medical Network Group  
 **Place of Work:** Global / Remote
 
 ## Psycho  
-Dr. Yusef Alimam is driven by a deep belief in using AI to solve meaningful problems in healthcare and education. With dual strengths in biomedical science and artificial intelligence, he thrives at the intersection of innovation and impact.  
+Yusef Alimam is driven by a deep belief in using AI to solve meaningful problems in healthcare and education. With dual strengths in biomedical science and artificial intelligence, he thrives at the intersection of innovation and impact.  
 His inner motivation stems from the desire to build systems that are not just efficient, but ethical — aiming to reduce friction in care delivery and elevate clinical intelligence.  
 He is intellectually curious, systems-oriented, and constantly learning to refine both himself and the tools he builds.
 
 ## Social  
-Dr. Alimam is embedded in a highly interdisciplinary and international network — with active ties in **San Diego, Bahrain, Dallas**, and multiple **global innovation hubs**.  
+Alimam is embedded in a highly interdisciplinary and international network — with active ties in **San Diego, Bahrain, Dallas**, and multiple **global innovation hubs**.  
 His social presence spans **startups**, **faith-based initiatives**, **academic ecosystems**, and **high-performing medical networks**.  
 He is known as a **thoughtful collaborator**, **educator-mentor**, and a **connector** between technical and clinical worlds.
 
@@ -210,29 +214,31 @@ He is known as a **thoughtful collaborator**, **educator-mentor**, and a **conne
       }
     }
 
-    async function downloadVideo() { //This function does not work yet, idk how to call the downloader
-      const videoId = document.getElementById("VideoID").value.trim();
-      if (!videoId) {
-        alert("Please enter a Vimeo ID.");
-        return;
-      }
-      document.getElementById("statusMessage").innerText = "⏳ Starting video download...";
-      try {
-        const response = await fetch("/api/run_video_downloader", {
+    async function downloadVideo() {
+        const videoId = document.getElementById("VideoID").value.trim();
+        if (!videoId) return alert("Enter a Vimeo ID.");
+
+        document.getElementById("statusMessage").innerText = "⏳ Processing…";
+        document.getElementById("loadingOverlay").classList.remove("hidden");
+
+        const res = await fetch("/api/run_pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ VIDEO_ID: videoId })
+          body: JSON.stringify({ video_id: videoId })
         });
-        if (response.ok) {
-          document.getElementById("statusMessage").innerText = "✅ Video download started.";
-        } else {
-          document.getElementById("statusMessage").innerText = "❌ Failed to start video download.";
+        const data = await res.json();
+        document.getElementById("loadingOverlay").classList.add("hidden");
+
+        if (!data.success) {
+          document.getElementById("statusMessage").innerText = `❌ ${data.error}`;
+          return;
         }
-      } catch (error) {
-        console.error(error);
-        document.getElementById("statusMessage").innerText = "❌ Error occurred while starting video download.";
+
+        intakeData.transcript = data.transcript;
+        document.getElementById("statusMessage").innerText = "✅ Transcript ready.";
+        generateInitial();          // now call your GPT generator
       }
-   }
+
 
 
     async function generateInitial() {
@@ -241,13 +247,13 @@ He is known as a **thoughtful collaborator**, **educator-mentor**, and a **conne
       document.getElementById("loadingOverlay").classList.remove("hidden");
 
       const prompt = `
-You are a profile generation assistant. Use this intake to generate a structured Bio-Psycho-Social-BusinessNeeds profile. For Income and Opportunities, write 'INPUT HERE'.
+You are a profile generation assistant. This intake is a transcript of an introductory meeting/interview. Determine which speaker is being interviewed. Use this intake to generate a structured Bio-Psycho-Social-BusinessNeeds profile for the interviewee. For Income and Opportunities, write 'INPUT HERE'.
 
 Sections:
 - Title: # Bio-Psycho-Social Business Profile
 - Bio: example 
 ## Bio  
-**Name:** Yusef Alimam  
+**Name:** Dr. Yusef Alimam  
 **Profession:** Medical AI Strategist, CTO, Educator  
 **Business Name:** Green Medical Network Group  
 **Place of Work:** Global / Remote
@@ -383,7 +389,7 @@ ${notes}
             { role: "system", content: "You are a profile generation assistant." },
             { role: "user", content: promptText }
           ],
-          temperature: 0.4
+          temperature: 0.3
         })
       });
       const data = await response.json();
