@@ -124,8 +124,19 @@
       <div id="initialButtonContainer" class="mt-8">
         <input type="text" id="VideoID" placeholder="Enter Vimeo ID"
            class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white mb-4 placeholder-gray-500" />
-        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="downloadVideo()">Generate Initial Profile</button>
       </div>
+
+      <div id="contextSection" class="hidden mt-8">
+        <h2 class="text-lg font-semibold mb-2 text-white">📘 Important Context</h2>
+        <textarea
+          id="userContext"
+          placeholder="Any key points or background to consider…"
+          class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white placeholder-gray-500 mb-4 resize-y"
+          style="min-height: 6rem;"
+        ></textarea>
+        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="downloadVideo()">Generate Initial Profile</button>
+
+      </div>      
 
       <div id="enrichmentSection" class="hidden mt-8">
         <h2 class="text-lg font-semibold mb-2 text-white">📝 Enrichment Notes</h2>
@@ -141,8 +152,6 @@
   </div>
 
   <script>
-
-    let intakeData = {};
 
 /*
     const intakeData = {
@@ -210,68 +219,107 @@ He is known as a **thoughtful collaborator**, **educator-mentor**, and a **conne
         document.getElementById("generatedOutput").classList.add("hidden");
         document.getElementById("enrichmentSection").classList.add("hidden");
         document.getElementById("editControls").classList.add("hidden");
+        document.getElementById("contextSection").classList.remove("hidden");
         document.getElementById("statusMessage").innerText = `🆕 Creating new profile for ${code}`;
       }
     }
 
     async function downloadVideo() {
-        const videoId = document.getElementById("VideoID").value.trim();
-        if (!videoId) return alert("Enter a Vimeo ID.");
+      const videoId = document.getElementById("VideoID").value.trim();
+      if (!videoId) {
+        alert("Please enter a Vimeo ID.");
+        return;
+      }
+      
+      document.getElementById("statusMessage").innerText = "⏳ Starting pipeline...";
+      document.getElementById("loadingOverlay").classList.remove("hidden");
 
-        document.getElementById("statusMessage").innerText = "⏳ Processing…";
-        document.getElementById("loadingOverlay").classList.remove("hidden");
-
-        const res = await fetch("/api/run_pipeline", {
+      try {
+        const response = await fetch("/api/run_pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ video_id: videoId })
         });
-        const data = await res.json();
-        document.getElementById("loadingOverlay").classList.add("hidden");
 
-        if (!data.success) {
-          document.getElementById("statusMessage").innerText = `❌ ${data.error}`;
-          return;
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          document.getElementById("statusMessage").innerText = "✅ Pipeline executed successfully.";
+          generateInitial(result.transcript, result.metadata);
+        } else {
+          document.getElementById("statusMessage").innerText = `❌ Error: ${result.error}`;
+          document.getElementById("loadingOverlay").classList.add("hidden");
         }
-
-        intakeData.transcript = data.transcript;
-        document.getElementById("statusMessage").innerText = "✅ Transcript ready.";
-        generateInitial();          // now call your GPT generator
+      } catch (error) {
+        console.error(error);
+        document.getElementById("statusMessage").innerText = "❌ Error during pipeline execution.";
+        document.getElementById("loadingOverlay").classList.add("hidden");
       }
+    }
 
 
 
-    async function generateInitial() {
 
+    async function generateInitial(transcript, metadata) {
+
+      const contextNotes = document.getElementById("userContext").value.trim();
+      console.log("📝 ContextNotes:", JSON.stringify(contextNotes));
       document.getElementById("statusMessage").innerText = "⏳ Generating profile...";
       document.getElementById("loadingOverlay").classList.remove("hidden");
 
       const prompt = `
-You are a profile generation assistant. This intake is a transcript of an introductory meeting/interview. Determine which speaker is being interviewed. Use this intake to generate a structured Bio-Psycho-Social-BusinessNeeds profile for the interviewee. For Income and Opportunities, write 'INPUT HERE'.
+The profile should precisely follow the given structure below:
 
-Sections:
-- Title: # Bio-Psycho-Social Business Profile
-- Bio: example 
-## Bio  
-**Name:** Dr. Yusef Alimam  
-**Profession:** Medical AI Strategist, CTO, Educator  
-**Business Name:** Green Medical Network Group  
-**Place of Work:** Global / Remote
 
-- Psycho (write as ## Psycho)
-- Social (write as ## Social)
-- Business Needs (write as ## Business Needs)
-- Income (write as ## Income)
-- Opportunities (write as ## Opportunities)
+# Bio-Psycho-Social Business Profile
 
-### Intake:
-${JSON.stringify(intakeData, null, 2)}
-      `.trim();
+## Bio
+**Name:** [Extract from metadata or transcript]
+**Profession:** [Clearly define based on intake]
+**Business Name:** [Include if available]
+**Place of Work:** [Specify or state as "INPUT HERE"]
+
+## Psycho
+- Describe psychological characteristics, personality traits, motivations, and mindset derived from the conversation.
+
+## Social
+- Outline social connections, networks, interpersonal dynamics, or community involvement mentioned or inferred.
+
+## Business Needs
+- Identify key business challenges, goals, priorities, or specific support needs explicitly or implicitly mentioned.
+
+## Income
+- INPUT HERE
+
+## Opportunities
+- INPUT HERE
+
+## Key Industry
+- Select at only one or more from the provided industry list. Do not add anything more:
+  - Real Estate
+  - Entrepreneurship (other)
+  - Technology
+  - Medicine
+
+
+### Video Metadata:
+${metadata}
+
+### Transcript:
+${transcript}
+
+### Relevant Context:
+${contextNotes}
+
+Ensure the profile is accurate, coherent, insightful, and structured exactly as instructed.
+
+    `.trim();
 
       const content = await fetchFromOpenAI(prompt);
       currentProfileMarkdown = content;
       renderMarkdown(content);
       document.getElementById("initialButtonContainer").classList.add("hidden");
+      document.getElementById("contextSection").classList.add("hidden");
       document.getElementById("enrichmentSection").classList.remove("hidden");
       document.getElementById("editControls").classList.remove("hidden");
       document.getElementById("loadingOverlay").classList.add("hidden");
@@ -287,6 +335,7 @@ ${JSON.stringify(intakeData, null, 2)}
       document.getElementById("statusMessage").innerText = "⏳ Enriching profile...";
       document.getElementById("loadingOverlay").classList.remove("hidden");
 
+      const contextNotes = document.getElementById("userContext").value.trim();
       const notes = document.getElementById("userEnrichment").value;
       const prompt = `
 You're an enrichment assistant. Merge the analyst's additions into the markdown profile.
@@ -302,6 +351,9 @@ Do NOT add comments or break structure. Just return the enriched markdown.
 
 ### Current Profile:
 ${currentProfileMarkdown}
+
+### RelevantContext:
+${contextNotes}
 
 ### Analyst Notes:
 ${notes}
@@ -384,9 +436,9 @@ ${notes}
           "Authorization": "Bearer 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"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4",
           messages: [
-            { role: "system", content: "You are a profile generation assistant." },
+            { role: "system", content: "You are an expert profile generation assistant. Your task is to analyze the provided interview transcript, video metadata (which likely contains the interviewee's name and important background information), and relevant context to identify the primary speaker being interviewed. Then, generate a structured and comprehensive Bio-Psycho-Social Business Profile for this individual." },
             { role: "user", content: promptText }
           ],
           temperature: 0.3

@@ -51,7 +51,7 @@ def index():
         "bio_psycho_social_generator_clean.html",
         mock_database=json.dumps(mockDatabase)
     )
-
+'''
 @app.route("/api/run_pipeline", methods=["POST"])
 def run_pipeline():
     data = request.get_json()
@@ -66,6 +66,38 @@ def run_pipeline():
         return jsonify(success=True, transcript=transcript)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+'''
+import DeepgramTranscriber
+import video_downloader
+from video_downloader import download_video, fetch_metadata_as_string
+from DeepgramTranscriber import transcribe_audio
 
+@app.route("/api/run_pipeline", methods=["POST"])
+def run_pipeline():
+    data = request.get_json()
+    vid = data.get("video_id")
+    if not vid:
+        return jsonify(success=False, error="No video_id provided"), 400
+    try:
+        # Fetch metadata
+        metadata = fetch_metadata_as_string(vid)
+
+        # Download video
+        video_file = download_video(vid)
+
+        # Transcribe audio (pass the downloaded file path)
+        transcript_file = transcribe_audio(video_file)
+        if not transcript_file:
+            raise Exception("Transcription failed.")
+
+        # Read the transcript text
+        with open(transcript_file, "r", encoding="utf-8") as f:
+            transcript = f.read()
+
+        # Return both metadata and transcript
+        return jsonify(success=True, transcript=transcript, metadata=metadata)
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+        
 if __name__ == "__main__":
     app.run(debug=True)
