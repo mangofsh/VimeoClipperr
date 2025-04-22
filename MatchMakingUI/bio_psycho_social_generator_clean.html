@@ -268,7 +268,7 @@ He is known as a **thoughtful collaborator**, **educator-mentor**, and a **conne
       document.getElementById("loadingOverlay").classList.remove("hidden");
 
       const prompt = `
-The profile should precisely follow the given structure below:
+The profile should precisely follow the given structure below. For Income and Opportunities, write 'INPUT HERE':
 
 
 # Bio-Psycho-Social Business Profile
@@ -289,10 +289,10 @@ The profile should precisely follow the given structure below:
 - Identify key business challenges, goals, priorities, or specific support needs explicitly or implicitly mentioned.
 
 ## Income
-- INPUT HERE
+'INPUT HERE'
 
 ## Opportunities
-- INPUT HERE
+'INPUT HERE'
 
 ## Key Industry
 - Select at only one or more from the provided industry list. Do not add anything more:
@@ -436,7 +436,7 @@ ${notes}
           "Authorization": "Bearer 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"
         },
         body: JSON.stringify({
-          model: "gpt-4",
+          model: "gpt-4o",
           messages: [
             { role: "system", content: "You are an expert profile generation assistant. Your task is to analyze the provided interview transcript, video metadata (which likely contains the interviewee's name and important background information), and relevant context to identify the primary speaker being interviewed. Then, generate a structured and comprehensive Bio-Psycho-Social Business Profile for this individual." },
             { role: "user", content: promptText }
