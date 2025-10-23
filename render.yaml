@@ -6,7 +6,7 @@ services:
     branch: main
     autoDeploy: true
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 1 --threads 2 --timeout 600 --graceful-timeout 600
+    startCommand: gunicorn -c gunicorn.conf.py app:app
     envVars:
       - key: OPENAI_API_KEY
         sync: false
