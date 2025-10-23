@@ -1,10 +1,6 @@
-import json
 from flask import Flask, render_template, request, jsonify
 import os
-import openai
 from openai import OpenAI
-from VimeoTools import deepgramTranscriber
-import VimeoTools.videoDownloader
 from VimeoTools.videoDownloader import download_video, fetch_metadata_as_string
 from VimeoTools.deepgramTranscriber import transcribe_audio
 from dotenv import load_dotenv
