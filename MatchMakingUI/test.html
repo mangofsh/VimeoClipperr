@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bio-Psycho-Social Profile Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#10b981' // Emerald (GPT green)
+          },
+          fontFamily: {
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/@tailwindcss/typography@0.5.9/dist/typography.min.css" rel="stylesheet">
+
+  <style>
+    /* Custom dark mode styles for typography */
+    .prose {
+      color: #e2e8f0;
+      max-width: none;
+    }
+    
+    .prose h1, 
+    .prose h2, 
+    .prose h3 {
+      color: white;
+      margin-top: 1.5em;
+      margin-bottom: 0.8em;
+      font-weight: 600;
+    }
+    
+    .prose h1 {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+    }
+    
+    .prose h2 {
+      font-size: 1.5rem;
+      line-height: 2rem;
+    }
+    
+    .prose h3 {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+      color: #f0f9ff;
+    }
+    
+    .prose p {
+      margin-top: 0.75em;
+      margin-bottom: 0.75em;
+    }
+    
+    .prose strong {
+      color: #f0f9ff;
+      font-weight: 600;
+    }
+    
+    .prose mark {
+      background-color: #22c55e33;
+      color: #bbf7d0;
+      padding: 0 0.2em;
+      border-radius: 0.25rem;
+    }
+    
+    .prose ul {
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+      list-style-type: disc;
+      padding-left: 1.625em;
+    }
+    
+    .prose li {
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
+    }
+    
+    .prose hr {
+      border-color: #4b5563;
+      margin-top: 2em;
+      margin-bottom: 2em;
+    }
+    
+    /* Profile section spacing */
+    .profile-section {
+      border-bottom: 1px solid #4b5563;
+      padding-bottom: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .profile-section:last-child {
+      border-bottom: none;
+    }
+  </style>
+  
+</head>
+<body class="dark bg-gray-900 text-gray-100">
+  <div class="max-w-3xl mx-auto mt-12 bg-gray-800 shadow-xl rounded-lg p-8">
+    <h1 class="text-2xl font-semibold mb-6">🧠 Bio-Psycho-Social Business Profile Builder</h1>
+
+    <label for="profileCode" class="block font-medium mb-1 text-gray-300">Assign or Retrieve Profile Code (e.g., ya214):</label>
+    <input type="text" id="profileCode" placeholder="Enter profile code"
+           class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white mb-4 placeholder-gray-500" />
+    <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="checkProfile()">Continue</button>
+
+    <p id="statusMessage" class="mt-4 text-sm text-gray-400 font-medium"></p>
+
+    <div id="profileSection" class="hidden mt-8">
+      <div id="generatedOutput" class="bg-gray-700 p-6 rounded-md"></div>
+
+      <div id="editControls" class="hidden mt-4 flex gap-3">
+        <button class="bg-gray-700 text-white border border-gray-500 px-4 py-2 rounded hover:bg-gray-600 transition" onclick="enterEditMode()">Edit</button>
+        <button class="bg-primary text-white px-4 py-2 rounded hidden" onclick="saveEdits()">Save Changes</button>
+      </div>
+
+      <div id="initialButtonContainer" class="mt-8">
+        <input type="text" id="VideoID" placeholder="Enter Vimeo ID"
+           class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white mb-4 placeholder-gray-500" />
+      </div>
+
+      <div id="contextSection" class="hidden mt-8">
+        <h2 class="text-lg font-semibold mb-2 text-white">📘 Important Context</h2>
+        <textarea
+          id="userContext"
+          placeholder="Any key points or background to consider…"
+          class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white placeholder-gray-500 mb-4 resize-y"
+          style="min-height: 6rem;"
+        ></textarea>
+        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="downloadVideo()">Generate Initial Profile</button>
+
+      </div>      
+
+      <div id="enrichmentSection" class="hidden mt-8">
+        <h2 class="text-lg font-semibold mb-2 text-white">📝 Enrichment Notes</h2>
+        <textarea id="userEnrichment" placeholder="Add enrichment here..."
+                  class="w-full p-3 border border-gray-600 rounded bg-gray-900 text-white placeholder-gray-500 mb-4 h-32"></textarea>
+        <button class="bg-primary text-white px-4 py-2 rounded hover:bg-emerald-600 transition" onclick="generateEnhanced()">Regenerate with Enrichment</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden flex items-center justify-center z-50">
+    <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-emerald-500 border-opacity-75"></div>
+  </div>
+
+  <script>
+/*
+    const intakeData = {
+      individualName: "Dr. Ayaan Malik",
+      businessName: "NeuroFocus Clinics",
+      profession: "Neurologist and Private Practice Owner",
+      placeOfWork: "Dallas, TX",
+      workIssues: "Wants to attract more patients online and automate appointment scheduling",
+      serviceNeeds: "Marketing, web design, CRM tools"
+    };
+*/
+    const mockDatabase = {
+        ya214: `# Bio-Psycho-Social Business Profile
+
+## Bio  
+**Name:** Yusef Alimam  
+**Profession:** Medical AI Strategist, CTO, Educator  
+**Business Name:** Green Medical Network Group  
+**Place of Work:** Global / Remote
+
+## Psycho  
+Yusef Alimam is driven by a deep belief in using AI to solve meaningful problems in healthcare and education. With dual strengths in biomedical science and artificial intelligence, he thrives at the intersection of innovation and impact.  
+His inner motivation stems from the desire to build systems that are not just efficient, but ethical — aiming to reduce friction in care delivery and elevate clinical intelligence.  
+He is intellectually curious, systems-oriented, and constantly learning to refine both himself and the tools he builds.
+
+## Social  
+Alimam is embedded in a highly interdisciplinary and international network — with active ties in **San Diego, Bahrain, Dallas**, and multiple **global innovation hubs**.  
+His social presence spans **startups**, **faith-based initiatives**, **academic ecosystems**, and **high-performing medical networks**.  
+He is known as a **thoughtful collaborator**, **educator-mentor**, and a **connector** between technical and clinical worlds.
+
+## Business Needs
+- **AI Automation for Healthcare:** Building or partnering with tools that use LLMs and computer vision to improve workflows in radiology, memory clinics, and administrative processes.  
+- **Strategic Partnerships:** Identifying early-stage ventures that align with ethical medical AI.  
+- **Scalable Revenue Streams:** Designing platforms or licensing models for white-labeled AI infrastructure (e.g., *Muse* for eyewear, *RLA* for supply chains).  
+- **Networked Intelligence:** Integrating data from hundreds of physicians into shared knowledge systems and patient-enabling interfaces.  
+- **Delegation & Offshore Teams:** Efficiently managing vetted remote contributors in design, engineering, and content ops.
+
+## Income  
+**Estimated Annual Income:** $120K
+
+## Opportunities
+- Can organize business relationships with hungry doctors to help them build their own AI tools.  
+- Interested in investing in **early-stage biotech** in **Europe**.`
+    };
+
+    let currentProfileMarkdown = null;
+    let currentProfileCode = null;
+    let isEditing = false;
+
+    function checkProfile() {
+      const code = document.getElementById("profileCode").value.trim();
+      if (!code) return alert("Enter a profile code.");
+      currentProfileCode = code;
+      document.getElementById("profileSection").classList.remove("hidden");
+
+      if (mockDatabase[code]) {
+        currentProfileMarkdown = mockDatabase[code];
+        renderMarkdown(currentProfileMarkdown);
+        document.getElementById("initialButtonContainer").classList.add("hidden");
+        document.getElementById("enrichmentSection").classList.remove("hidden");
+        document.getElementById("editControls").classList.remove("hidden");
+        document.getElementById("statusMessage").innerText = `✅ Loaded profile for ${code}`;
+      } else {
+        document.getElementById("initialButtonContainer").classList.remove("hidden");
+        document.getElementById("generatedOutput").classList.add("hidden");
+        document.getElementById("enrichmentSection").classList.add("hidden");
+        document.getElementById("editControls").classList.add("hidden");
+        document.getElementById("contextSection").classList.remove("hidden");
+        document.getElementById("statusMessage").innerText = `🆕 Creating new profile for ${code}`;
+      }
+    }
+
+    async function downloadVideo() {
+      const videoId = document.getElementById("VideoID").value.trim();
+      if (!videoId) {
+        alert("Please enter a Vimeo ID.");
+        return;
+      }
+      
+      document.getElementById("statusMessage").innerText = "⏳ Generating Profile... (May take up to 5 minutes)";
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+
+      try {
+        const response = await fetch("/api/run_pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_id: videoId })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          document.getElementById("statusMessage").innerText = "✅ Pipeline executed successfully.";
+          generateInitial(result.transcript, result.metadata);
+        } else {
+          document.getElementById("statusMessage").innerText = `❌ Error: ${result.error}`;
+          document.getElementById("loadingOverlay").classList.add("hidden");
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById("statusMessage").innerText = "❌ Error during pipeline execution.";
+        document.getElementById("loadingOverlay").classList.add("hidden");
+      }
+    }
+
+
+
+
+    async function generateInitial(transcript, metadata) {
+
+      const contextNotes = document.getElementById("userContext").value.trim();
+      document.getElementById("statusMessage").innerText = "⏳ Almost Ready...";
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+
+      const prompt = `
+
+### Important Context:
+${contextNotes}
+
+You are an expert profile generation assistant. Your task is to analyze the provided interview transcript, video metadata (which likely contains the interviewee's name and important background information), and contextNotes to identify the primary speaker being interviewed. Then, generate a structured and comprehensive Bio-Psycho-Social Business Profile for this individual. As you build the profile, **weave those contextNotes insights explicitly** into every section.
+The interviewee is not yet affiliated with GMNG. The profile should precisely follow the given structure below. For Income and Opportunities, write 'INPUT HERE':
+
+
+# Bio-Psycho-Social Business Profile
+
+## Bio
+**Name:** [Extract from metadata or transcript]
+**Profession:** [Clearly define based on intake]
+**Business Name:** [Include if available, or state as "INPUT HERE"]
+**Place of Work:** [Specify if available. Only if student, include School/University or place of internship]
+
+## Psycho
+Describe psychological characteristics, personality traits, motivations, and mindset derived from the conversation.
+
+## Social
+Outline social connections, networks, interpersonal dynamics, or community involvement mentioned or inferred —**drawing on contextNotes** for deeper nuance.
+
+## Business Needs
+Identify key business challenges, goals, priorities, or specific support needs explicitly or implicitly mentioned.
+
+## Income
+INPUT HERE (unless expilitly stated)
+
+## Opportunities
+INPUT HERE
+
+## Key Industry
+Select only one or more from the provided industry list. Do not add anything more:
+ - Real Estate
+ - Entrepreneurship (other)
+ - Technology
+ - Medicine
+
+
+### Video Metadata:
+${metadata}
+
+### Transcript:
+${transcript}
+
+
+Ensure the profile is accurate, coherent, **and richly informed by the contextNotes**, insightful, and structured exactly as instructed. The target audience is a potential client, employer or buisness partner.
+
+    `.trim();
+
+      const content = await fetchFromOpenAI(prompt);
+      currentProfileMarkdown = content;
+      renderMarkdown(content);
+      document.getElementById("initialButtonContainer").classList.add("hidden");
+      document.getElementById("contextSection").classList.add("hidden");
+      document.getElementById("enrichmentSection").classList.remove("hidden");
+      document.getElementById("editControls").classList.remove("hidden");
+      document.getElementById("loadingOverlay").classList.add("hidden");
+      document.getElementById("statusMessage").innerText = `✅ Profile created for ${currentProfileCode}`;
+    }
+
+    async function generateEnhanced() {
+      if (isEditing) {
+        const save = confirm("You have unsaved edits. Save first?");
+        if (save) saveEdits(); else return;
+      }
+
+      document.getElementById("statusMessage").innerText = "⏳ Enriching profile...";
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+
+      const contextNotes = document.getElementById("userContext").value.trim();
+      const notes = document.getElementById("userEnrichment").value;
+      const prompt = `
+You're an enrichment assistant. Merge the analyst's additions into the markdown profile.
+
+## Bio  
+## Psycho  
+## Social  
+## Business Needs  
+## Income  
+## Opportunities
+## Key Industry
+
+Do NOT add comments, sections or break structure. Just return the enriched markdown.
+
+### Current Profile:
+${currentProfileMarkdown}
+
+### RelevantContext:
+${contextNotes}
+
+### Analyst Notes:
+${notes}
+      `.trim();
+
+      const content = await fetchFromOpenAI(prompt);
+      currentProfileMarkdown = content;
+      renderMarkdown(content);
+      document.getElementById("userEnrichment").value = "";
+      document.getElementById("loadingOverlay").classList.add("hidden");
+      document.getElementById("statusMessage").innerText = "✅ Profile enriched.";
+    }
+
+    function enterEditMode() {
+      if (isEditing) return;
+      isEditing = true;
+
+      document.getElementById("generatedOutput").classList.add("hidden");
+      const area = document.createElement("textarea");
+      area.id = "editArea";
+      area.className = "w-full h-96 p-3 border border-gray-600 rounded bg-gray-900 text-white font-mono";
+      area.value = currentProfileMarkdown;
+      document.getElementById("editControls").before(area);
+
+      document.querySelector("#editControls button[onclick='enterEditMode()']").classList.add("hidden");
+      document.querySelector("#editControls button[onclick='saveEdits()']").classList.remove("hidden");
+    }
+
+    function saveEdits() {
+      const area = document.getElementById("editArea");
+      if (!area) return;
+      currentProfileMarkdown = area.value;
+      area.remove();
+      isEditing = false;
+      renderMarkdown(currentProfileMarkdown);
+      document.getElementById("generatedOutput").classList.remove("hidden");
+
+      document.querySelector("#editControls button[onclick='enterEditMode()']").classList.remove("hidden");
+      document.querySelector("#editControls button[onclick='saveEdits()']").classList.add("hidden");
+    }
+
+    function renderMarkdown(mdText) {
+        const code = document.getElementById("profileCode").value.trim();
+        const header = code ? `<h2 class="text-lg font-semibold mb-2">🆔 Profile: ${code}</h2>` : "";
+        const highlighted = mdText.replace(/INPUT HERE/g, '<mark>INPUT HERE</mark>');
+
+        marked.setOptions({
+            gfm: true,
+            breaks: true,
+            headerIds: false
+        });
+
+        const parsedContent = marked.parse(highlighted);
+        
+        // Process the parsed content to add section styling
+        const processedContent = parsedContent
+            .replace(/<h2/g, '<div class="profile-section"><h2')
+            .replace(/<h2/g, '<h2 class="text-xl font-bold mt-6 mb-3 text-white"')
+            .replace(/<\/h2>/g, '</h2>')
+            // Add closing div for sections before the next h2 or at the end
+            .replace(/<\/div><div class="profile-section">/g, '</div><div class="profile-section">')
+            + '</div>';
+
+        document.getElementById("generatedOutput").innerHTML = `
+            <div class="prose">
+                ${header}
+                ${processedContent}
+            </div>
+        `;
+        
+        document.getElementById("generatedOutput").classList.remove("hidden");
+    }
+
+  async function fetchFromOpenAI(promptText) {
+    const response = await fetch("/api/generate-profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        prompt: promptText
+      })
+    });
+    const data = await response.json();
+    return data.content || "⚠️ No response from GPT.";
+}
+
+    window.addEventListener("load", () => {
+      document.getElementById("loadingOverlay").classList.add("hidden");
+    });
+  </script>
+</body>
+</html>
