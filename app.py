@@ -6,6 +6,7 @@ from VimeoTools.deepgramTranscriber import transcribe_audio
 from dotenv import load_dotenv
 import logging
 
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -116,4 +117,4 @@ def generate_profile():
         return jsonify({"error": "Failed to generate profile"}), 500
         
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
